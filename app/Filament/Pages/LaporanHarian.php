@@ -16,13 +16,22 @@ class LaporanHarian extends Page implements Tables\Contracts\HasTable
     protected static string $view = 'filament.pages.laporan-harian';
     protected static ?string $title = 'Laporan Harian';
 
-    // Setup tabel transaksi hari ini
+    // selected date for the report (YYYY-MM-DD)
+    public string $selectedDate;
+
+    public function mount(): void
+    {
+        // if ?date= exists use it, otherwise default to today
+        $this->selectedDate = (string) request()->query('date', Carbon::today()->toDateString());
+    }
+
+    // Setup tabel transaksi for the selected date
     protected function getTableQuery()
     {
-        $today = Carbon::today();
+        $date = Carbon::parse($this->selectedDate)->startOfDay();
 
         // Eager-load items and their products to avoid N+1 queries
-        return Transaction::with('items.product')->whereDate('transaction_date', $today);
+        return Transaction::with('items.product')->whereDate('transaction_date', $date);
     }
 
     protected function getTableColumns(): array
@@ -73,10 +82,44 @@ class LaporanHarian extends Page implements Tables\Contracts\HasTable
         return [];
     }
 
+    // Navigate to previous day
+    public function previousDay(): void
+    {
+        $date = Carbon::parse($this->selectedDate)->subDay()->toDateString();
+
+        // redirect with ?date= to reload page and table
+        $this->redirect(request()->fullUrlWithQuery(['date' => $date]));
+    }
+
+    // Navigate to next day
+    public function nextDay(): void
+    {
+        $date = Carbon::parse($this->selectedDate)->addDay()->toDateString();
+
+        $this->redirect(request()->fullUrlWithQuery(['date' => $date]));
+    }
+
+    // Go to today
+    public function goToToday(): void
+    {
+        $date = Carbon::today()->toDateString();
+
+        $this->redirect(request()->fullUrlWithQuery(['date' => $date]));
+    }
+
+    // Set a specific date (YYYY-MM-DD)
+    public function setDate(string $date): void
+    {
+        // validate minimal format by trying to parse
+        $parsed = Carbon::parse($date)->toDateString();
+
+        $this->redirect(request()->fullUrlWithQuery(['date' => $parsed]));
+    }
+
     public function getTotalHariIni()
     {
-        $today = Carbon::today();
-        $sum = Transaction::whereDate('transaction_date', $today)->sum('total');
+        $date = Carbon::parse($this->selectedDate);
+        $sum = Transaction::whereDate('transaction_date', $date)->sum('total');
 
         // Return numeric value (float) so the Blade view can safely call number_format on it.
         return (float) $sum;
