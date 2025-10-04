@@ -14,7 +14,7 @@ class LaporanHarian extends Page implements Tables\Contracts\HasTable
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
     protected static string $view = 'filament.pages.laporan-harian';
-    protected static ?string $title = 'Laporan Harian';
+    protected static ?string $title = 'Daily Report';
 
     // selected date for the report (YYYY-MM-DD)
     public string $selectedDate;

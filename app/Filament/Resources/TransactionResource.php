@@ -102,7 +102,7 @@ class TransactionResource extends Resource
                     ->wrap(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
