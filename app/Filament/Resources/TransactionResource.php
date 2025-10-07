@@ -5,20 +5,21 @@ namespace App\Filament\Resources;
 use Filament\Tables;
 use Filament\Forms;
 use App\Models\Product;
+use App\Models\Transaction;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
-use App\Models\Transaction;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
-use App\Filament\Resources\TransactionResource\Pages;
 use Filament\Forms\Components\DateTimePicker;
+use App\Filament\Resources\TransactionResource\Pages;
 
 class TransactionResource extends Resource
 {
     protected static ?string $model = Transaction::class;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationLabel = 'Transaksi';
 
     public static function form(Form $form): Form
     {
@@ -36,7 +37,7 @@ class TransactionResource extends Resource
                     ->schema([
                         Select::make('product_id')
                             ->label('Produk')
-                            ->options(Product::all()->pluck('name', 'id'))
+                            ->relationship('product', 'name') // Lebih efisien
                             ->required()
                             ->reactive()
                             ->afterStateUpdated(function ($state, callable $set) {
@@ -60,7 +61,6 @@ class TransactionResource extends Resource
                         TextInput::make('price')
                             ->label('Harga per Item')
                             ->numeric()
-                            ->required()
                             ->disabled()
                             ->dehydrated(true),
 
@@ -78,31 +78,33 @@ class TransactionResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('transaction_date')
-                    ->dateTime()
+                    ->label('Tanggal Transaksi')
+                    ->dateTime('d M Y H:i')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('total')
+                    ->label('Total')
                     ->money('idr', true)
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('items')
                     ->label('Detail Produk')
                     ->formatStateUsing(function ($state, $record) {
-                        if (!$record) return '';
-
-                        $items = collect($record->items)->map(function ($item) {
+                        return collect($record->items)->map(function ($item) {
                             $productName = $item->product?->name ?? '—';
                             $qty = $item->quantity ?? 0;
-                            $subtotal = number_format($item->subtotal ?? 0, 0);
+                            $subtotal = number_format($item->subtotal ?? 0, 0, ',', '.');
                             return "{$productName} x{$qty}: Rp{$subtotal}";
-                        });
-
-                        return $items->implode(', ');
+                        })->implode(', ');
                     })
                     ->wrap(),
             ])
+            ->filters([
+                Tables\Filters\Filter::make('Hari Ini')
+                    ->query(fn ($query) => $query->whereDate('transaction_date', today())),
+            ])
             ->actions([
-                
+                Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
@@ -125,7 +127,7 @@ class TransactionResource extends Resource
     }
 
     /**
-     * Hitung total dan kurangi stok sebelum create
+     * Hitung total dan isi price + subtotal sebelum create
      */
     public static function mutateFormDataBeforeCreate(array $data): array
     {
@@ -141,6 +143,7 @@ class TransactionResource extends Resource
         }
 
         $data['total'] = $total;
+
         return $data;
     }
 

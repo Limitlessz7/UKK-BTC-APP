@@ -1,5 +1,5 @@
 <x-filament::page>
-    <h2 class="text-xl font-bold mb-4">Laporan Penjualan Hari Ini ({{ \Carbon\Carbon::today()->toFormattedDateString() }})</h2>
+    <h2 class="text-xl font-bold mb-4">Daily Report({{ \Carbon\Carbon::today()->toFormattedDateString() }})</h2>
 
     <div class="mb-6">
         <span class="font-semibold">Total Pendapatan:</span>
